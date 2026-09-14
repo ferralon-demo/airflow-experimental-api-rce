@@ -2,9 +2,10 @@
 #
 # This file is the entire Ferralon footprint in this repository: one GitHub Actions
 # workflow that runs a free, deterministic dependency-advisory scan in this repository's
-# own runner, via the pinned, checksum-verified ferralon-ai/ferralon-assay Action. Nothing
-# else is committed here, and the scan itself never runs on Ferralon's infrastructure — it
-# runs on this workflow's own token, in this repository's own runner.
+# own runner, via the tag-pinned ferralon-ai/ferralon-assay Action (scanner checksum
+# verification is an opt-in `scanner-sha256` input, not the default). Nothing else is
+# committed here, and the scan itself never runs on Ferralon's infrastructure — it runs on
+# this workflow's own token, in this repository's own runner.
 #
 # Removing Ferralon: this file removes itself when the Ferralon App is uninstalled;
 # deleting it manually is also safe — the refs/tegron/state ref cleans itself up either
