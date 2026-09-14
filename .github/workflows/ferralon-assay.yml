@@ -43,3 +43,7 @@ jobs:
           ingest-url: https://api.ferralon.com/ingest
           state-repo: ${{ github.repository }}
           state-ref: refs/tegron/state
+          # Stopgap: this demo's planted CVE-2020-13927 is a house canary, so it never
+          # enters the Python work set on a default scan. Opt in until a synthetic CVE
+          # replaces it.
+          include-house-canaries: true
