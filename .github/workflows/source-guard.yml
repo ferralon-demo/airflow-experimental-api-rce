@@ -1,0 +1,75 @@
+# Source guard — no auto-prove fix-branch may land on a GOLDEN reference branch.
+#
+# Generalised from ferralon-demo/demo-go-svc (TEG-054) by the fixture layout standard
+# (pipeline-test 1.3, 2026-09-22). The golden branches in this repository are the honest,
+# reproducible reference trees: `baseline`. They must never be patched by an auto-prove
+# fix. Fix-PRs belong on the DISPOSABLE `main` (reset from the golden branch with
+# `.demo/prep-demo.sh`, fired against, patched, wiped).
+#
+# THE CONDITION matches the substring `autoprove` in the PR's head branch. That covers both
+# fix-branch generations the pipeline has produced (`…-autoprove-fix-…` and
+# `ferralon/autoprove/…`).
+#
+# HONEST LIMITS — this guard is REACTIVE, not a hard gate:
+#   * Native branch protection is unavailable (private repo, free plan: the API returns 403), so
+#     this job CLOSES the offending PR and then fails. There is a window between "opened" and
+#     "closed", and a maintainer can reopen it.
+#   * Direct pushes to a golden branch are not covered: this is a pull_request guard.
+#   * It is name-based. A hand-made branch carrying the same patch is not caught.
+# The LOAD-BEARING guards live outside this file: the repository's default branch being `main`
+# (the fix-PR base is read from it), and the backend's per-repo protected-ref designations
+# (cmd/protect-ref), which make auto-prove refuse to fire at, or open a fix-PR into, a golden ref.
+#
+# ACTIVATION: for a pull_request event GitHub matches `branches:` against the PR's BASE and runs
+# this file from the merge commit, so it must live on each golden branch it names.
+
+name: Source guard
+
+on:
+  pull_request:
+    # `edited` fires when a PR's base branch is changed — a fix-PR re-pointed at a golden branch.
+    types: [opened, reopened, synchronize, edited]
+    branches: [baseline]
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: no auto-prove fix into a golden branch
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write     # required to close the offending PR and comment on it
+    steps:
+      - name: Normal head — nothing to guard against
+        if: ${{ !contains(github.head_ref, 'autoprove') }}
+        run: |
+          echo "Source guard clean — head branch '${{ github.head_ref }}' is not an auto-prove fix-branch."
+
+      - name: Auto-prove fix-branch into a golden branch — close it
+        if: ${{ contains(github.head_ref, 'autoprove') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          echo "Source guard VIOLATION — head '$HEAD_REF' is an auto-prove fix-branch and its base '$BASE_REF' is a golden branch. Closing." >&2
+          cat > "$RUNNER_TEMP/source-guard-comment.md" <<'EOF'
+          ### Closed automatically by the Ferralon source guard
+
+          This pull request was opened from an **auto-prove fix-branch** against a **golden reference
+          branch**. Golden branches must stay honestly vulnerable (or be the exact reference patch), so
+          that every later fire against the fixture reports the truth.
+
+          **What to do instead:** land the fix on **`main`**, the disposable fire target. Reset it from
+          the golden branch with `.demo/prep-demo.sh --execute`, fire against it, and merge the fix-PR
+          there.
+
+          This guard is reactive and deliberately not a hard gate. If you believe this close is wrong,
+          reopen and say why in a comment.
+          EOF
+          gh pr close "$PR_URL" --comment "$(cat "$RUNNER_TEMP/source-guard-comment.md")"
+          echo "Pull request closed. Failing the job so the violation is on the check record too." >&2
+          exit 1

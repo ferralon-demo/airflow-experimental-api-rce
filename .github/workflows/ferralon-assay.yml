@@ -9,16 +9,29 @@
 # committed here, and the scan itself never runs on Ferralon's infrastructure — it runs on
 # this workflow's own token, in this repository's own runner.
 #
+# FIXTURE LAYOUT STANDARD (pipeline-test 1.3, 2026-09-22). `baseline` (and the reference
+# patch `fix`) are GOLDEN: never scanned, never the default branch, protected per repo in the
+# backend. `main` is the default branch, the only scanned branch, and the disposable fire
+# target — reset from `baseline` with `.demo/prep-demo.sh`. Before this change `baseline` was
+# the default branch and every push was scanned, so real prod scans ran on refs/heads/baseline
+# and a fix-PR would have targeted it. GitHub matches the push filter against the copy of this
+# file ON THE PUSHED BRANCH, so `baseline`'s copy must name `main` too. The StateStore is now
+# persisted on the default branch only (it was unconditional before).
+#
 # Removing Ferralon: this file removes itself when the Ferralon App is uninstalled;
-# deleting it manually is also safe — the refs/tegron/state ref cleans itself up either
-# way. If you would rather remove it yourself right now: delete this file (a direct commit
-# or a PR both work) and, optionally, `git push origin --delete refs/tegron/state`.
+# deleting it manually is also safe. If you would rather remove it yourself right now: delete
+# this file (a direct commit or a PR both work) and, optionally,
+# `git push origin --delete refs/tegron/state`.
 
 name: Ferralon Assay
 
 on:
   pull_request:
   push:
+    # The disposable default branch only (see FIXTURE LAYOUT STANDARD above). branches:
+    # cannot use a default_branch expression, so the name is hardcoded.
+    branches: [main]
+  workflow_dispatch:
   schedule:
     - cron: "17 3 * * *" # daily, off-peak (03:17 UTC)
   repository_dispatch:
@@ -41,7 +54,9 @@ jobs:
         with:
           target: .
           ingest-url: https://api.ferralon.com/ingest
-          state-repo: ${{ github.repository }}
+          # Persist the durable StateStore ref only on the default branch. A PR or
+          # non-default-branch run stays stateless and never overwrites the baseline.
+          state-repo: ${{ github.ref_name == github.event.repository.default_branch && github.repository || '' }}
           state-ref: refs/tegron/state
           # Stopgap: this demo's planted CVE-2020-13927 is a house canary, so it never
           # enters the Python work set on a default scan. Opt in until a synthetic CVE
