@@ -62,6 +62,10 @@ jobs:
           # fireable runs ONLY from report_runs, so an unlinked scan is invisible to the fire plane.
           # (ingest-url above is only an endpoint OVERRIDE; it enables nothing without this.)
           link-to-console: "true"
+          # STOPGAP (F28, 2026-09-22): the pinned release appears to carry no baked run-snapshot
+          # endpoint, so a linked run resolves an empty runs URL and silently pushes nothing.
+          # Override it explicitly until the release bakes ASSAY_RUNS_URL; then delete this line.
+          runs-url: https://api.ferralon.com/runs
           state-ref: refs/tegron/state
           # Stopgap: this demo's planted CVE-2020-13927 is a house canary, so it never
           # enters the Python work set on a default scan. Opt in until a synthetic CVE
