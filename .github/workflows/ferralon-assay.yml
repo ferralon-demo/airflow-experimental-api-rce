@@ -67,6 +67,9 @@ jobs:
           # Override it explicitly until the release bakes ASSAY_RUNS_URL; then delete this line.
           runs-url: https://api.ferralon.com/runs
           state-ref: refs/tegron/state
+          advisory-corpus-repo: ferralon-ai/vulnerability-corpus
+          advisory-corpus-ref: main
+          advisory-corpus-policy: published-24h
           # Stopgap: this demo's planted CVE-2020-13927 is a house canary, so it never
           # enters the Python work set on a default scan. Opt in until a synthetic CVE
           # replaces it.
