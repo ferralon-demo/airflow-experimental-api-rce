@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ferralon-ai/ferralon-assay@v0.3
+      - uses: ferralon-ai/ferralon-assay@v0.5
         with:
           target: .
           ingest-url: https://api.ferralon.com/ingest
